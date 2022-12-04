@@ -13,7 +13,7 @@ on:
       kernel_repo:
         description: "Select the kernel repository"
         required: false
-        default: "unifreq"
+        default: "zihelyu"
         type: choice
         options:
           - zihelyu
