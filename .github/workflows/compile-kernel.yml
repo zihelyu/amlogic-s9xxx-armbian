@@ -16,6 +16,7 @@ on:
         default: "unifreq"
         type: choice
         options:
+          - zihelyu
           - unifreq
           - kernel.org
       kernel_version:
