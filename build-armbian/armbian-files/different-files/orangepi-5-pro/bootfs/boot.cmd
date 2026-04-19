@@ -11,6 +11,7 @@ setenv verbosity "1"
 setenv console "both"
 setenv bootlogo "false"
 setenv rootfstype "ext4"
+setenv rootflags "rw,errors=remount-ro"
 setenv docker_optimizations "on"
 setenv earlycon "off"
 
@@ -26,16 +27,14 @@ if test "${logo}" = "disabled"; then setenv logo "logo.nologo"; fi
 if test "${console}" = "display" || test "${console}" = "both"; then setenv consoleargs "console=tty1"; fi
 if test "${console}" = "serial" || test "${console}" = "both"; then setenv consoleargs "console=ttyS2,1500000 ${consoleargs}"; fi
 if test "${earlycon}" = "on"; then setenv consoleargs "earlycon ${consoleargs}"; fi
-if test "${bootlogo}" = "true"; then
-        setenv consoleargs "splash plymouth.ignore-serial-consoles ${consoleargs}"
-else
-        setenv consoleargs "splash=verbose ${consoleargs}"
-fi
+if test "${bootlogo}" = "true"; then setenv consoleargs "bootsplash.bootfile=bootsplash.armbian ${consoleargs}"; fi
 
 # get PARTUUID of first partition on SD/eMMC the boot script was loaded from
-if test "${devtype}" = "mmc"; then part uuid mmc ${devnum}:1 partuuid; fi
+# if test "${devtype}" = "mmc"; then part uuid mmc ${devnum}:1 partuuid; fi
+# get PARTUUID of first partition on current boot device the boot script was loaded from
+part uuid ${devtype} ${devnum}:1 partuuid
 
-setenv bootargs "root=${rootdev} rootwait rootfstype=${rootfstype} ${consoleargs} consoleblank=0 loglevel=${verbosity} ubootpart=${partuuid} usb-storage.quirks=${usbstoragequirks} ${extraargs} ${extraboardargs}"
+setenv bootargs "root=${rootdev} rootwait rootfstype=${rootfstype} rootflags=${rootflags} ${consoleargs} consoleblank=0 loglevel=${verbosity} ubootpart=${partuuid} usb-storage.quirks=${usbstoragequirks} ${extraargs} ${extraboardargs}"
 
 if test "${docker_optimizations}" = "on"; then setenv bootargs "${bootargs} cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory swapaccount=1"; fi
 
@@ -45,14 +44,12 @@ load ${devtype} ${devnum} ${kernel_addr_r} ${prefix}Image
 load ${devtype} ${devnum} ${fdt_addr_r} ${prefix}dtb/${fdtfile}
 fdt addr ${fdt_addr_r}
 fdt resize 65536
-
 for overlay_file in ${overlays}; do
 	if load ${devtype} ${devnum} ${load_addr} ${prefix}dtb/rockchip/overlay/${overlay_prefix}-${overlay_file}.dtbo; then
 		echo "Applying kernel provided DT overlay ${overlay_prefix}-${overlay_file}.dtbo"
 		fdt apply ${load_addr} || setenv overlay_error "true"
 	fi
 done
-
 for overlay_file in ${user_overlays}; do
 	if load ${devtype} ${devnum} ${load_addr} ${prefix}overlay-user/${overlay_file}.dtbo; then
 		echo "Applying user provided DT overlay ${overlay_file}.dtbo"
@@ -73,13 +70,7 @@ else
 		source ${load_addr}
 	fi
 fi
-
-if test "${ethernet_phy}" = "rtl8211f"; then
-        fdt set /ethernet@ff540000 tx_delay <0x24>
-        fdt set /ethernet@ff540000 rx_delay <0x18>
-fi
-
 booti ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
 
 # Recompile with:
-# mkimage -C none -A arm -T script -d /boot/boot.cmd /boot/boot.scr
+# mkimage -C none -A arm -T script -n 'flatmax load script' -d /boot/boot.cmd /boot/boot.scr
