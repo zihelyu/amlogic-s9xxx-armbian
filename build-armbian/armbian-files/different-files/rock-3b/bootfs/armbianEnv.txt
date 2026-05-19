@@ -6,3 +6,7 @@ overlay_prefix=rk3568
 fdtfile=rockchip/rk3568-rock-3b.dtb
 rootdev=/dev/mmcblk0p2
 rootfstype=ext4
+rootflags=rw,errors=remount-ro
+docker_optimizations=on
+extraargs=rw rootwait
+extraboardargs=net.ifnames=0
